@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0E1116">
+<title>Verifica AI · Calculadora de Contracheques</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0E1116;
+    --surface: #161A21;
+    --surface-2: #1B2029;
+    --field: #0E1116;
+    --line: #232833;
+    --line-strong: #2E3541;
+    --text: #E8EAED;
+    --text-2: #8B93A1;
+    --lime: #C6F432;
+    --lime-ink: #0E1116;
+    --amber: #F5A524;
+    --coral: #FF6B6B;
+    --violet: #7C8CFF;
+    --danger-bg: rgba(255, 107, 107, 0.10);
+    --danger-line: rgba(255, 107, 107, 0.28);
+    --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  /* manipulation: mantém o zoom por pinça liberado (acessibilidade) e remove o atraso do toque */
+  html, body { margin: 0; padding: 0; touch-action: manipulation; background: var(--bg); }
+
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--font-sans); font-size: 15px; line-height: 1.4;
+    display: flex; justify-content: center;
+    min-height: 100vh; min-height: 100dvh;
+    padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+    font-variant-numeric: tabular-nums;
+  }
+
+  .device { width: 100%; max-width: 480px; }
+
+  /* Barra superior */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 10px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
+    background: rgba(14, 17, 22, 0.88);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  }
+  .brand { flex: 1; min-width: 0; }
+  .brand .name { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand .sub { font-size: 12px; color: var(--text-2); margin-top: 1px; }
+  .mini {
+    font-size: 14px; font-weight: 600; color: var(--lime);
+    opacity: 0; transform: translateY(4px); transition: opacity .2s ease, transform .2s ease;
+    white-space: nowrap; pointer-events: none;
+  }
+  .topbar.scrolled .mini { opacity: 1; transform: none; }
+  .iconbtn {
+    width: 40px; height: 40px; flex: none; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--text-2); cursor: pointer;
+  }
+  .iconbtn:active { background: var(--line); }
+  .iconbtn svg, .tab-link svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Hero com rosca */
+  .hero {
+    margin: 4px 16px 16px; padding: 20px 16px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 16px;
+  }
+  .donut { position: relative; width: 148px; height: 148px; flex: none; }
+  .donut svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+  .donut circle { fill: none; stroke-width: 12; }
+  .donut .track { stroke: var(--surface-2); }
+  .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 22px; }
+  .donut-center .lbl { font-size: 12px; color: var(--text-2); }
+  .donut-center .val { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; white-space: nowrap; }
+  .donut-center .val small { font-size: 12px; font-weight: 500; color: var(--text-2); margin-right: 3px; }
+
+  .legend { flex: 1 1 170px; min-width: 0; }
+  .lg { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .lg:first-child { border-top: none; padding-top: 0; }
+  .lg:last-child { padding-bottom: 0; }
+  .lg .l { color: var(--text-2); display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+  .lg .l b { font-weight: 500; }
+  .lg .l em { font-style: normal; font-size: 12px; opacity: .75; }
+  .lg .v { font-weight: 600; white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; align-self: center; }
+  .lg.total .l { color: var(--text); font-weight: 600; }
+
+  /* Conteúdo das abas */
+  .tab-content { display: none; padding: 0 16px; animation: fadeIn .25s ease; }
+  .tab-content.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .tab-content { animation: none; } .mini, .toast { transition: none; } }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; margin-bottom: 14px; }
+  .card-title { font-size: 16px; font-weight: 600; margin: 0 0 4px; display: flex; align-items: center; gap: 6px; }
+  .card-sub { font-size: 13px; color: var(--text-2); margin: 0 0 12px; line-height: 1.45; }
+  .card-title + .row { margin-top: 8px; }
+
+  .help-btn {
+    display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--surface-2); border: 1px solid var(--line-strong); color: var(--text-2);
+    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; padding: 0;
+  }
+
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: none; }
+  .row .rlabel { font-size: 15px; flex: 1; min-width: 0; }
+  .row .rlabel small { display: block; font-size: 12px; color: var(--text-2); margin-top: 2px; line-height: 1.35; }
+  .row.stack { flex-direction: column; align-items: stretch; gap: 8px; }
+
+  .field {
+    display: flex; align-items: center; background: var(--field); border: 1px solid var(--line-strong);
+    border-radius: 12px; padding: 0 12px; min-height: 44px; transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .field:focus-within { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(198, 244, 50, 0.14); }
+  .field .prefix, .field .suffix { font-size: 14px; color: var(--text-2); font-weight: 500; }
+  .field .prefix { margin-right: 6px; }
+  .field .suffix { margin-left: 4px; }
+  .field input, .field select {
+    border: none; outline: none; width: 100%; min-width: 0; font-family: inherit; font-size: 16px; font-weight: 500;
+    color: var(--text); background: transparent; text-align: right; padding: 10px 0; font-variant-numeric: tabular-nums;
+  }
+  .field input::placeholder { color: #4B5361; }
+  .field select { text-align: left; cursor: pointer; }
+  .field select option { background: var(--surface-2); color: var(--text); }
+  .field.wide { width: 148px; } .field.small { width: 96px; } .field.pct { width: 78px; } .field.full { width: 100%; }
+  .field.auto { width: auto; }
+
+  .row.result { background: var(--surface-2); padding: 12px; border-radius: 12px; margin-top: 8px; border-bottom: none; }
+  .row.result .rlabel { color: var(--text-2); font-size: 14px; }
+  .row.result .rvalue { font-size: 16px; font-weight: 600; }
+  .neg-text { color: var(--coral); }
+  .pos-text { color: var(--lime); }
+
+  .formula-text { font-size: 12px; color: var(--text-2); margin-top: 4px; display: block; }
+
+  .auto-descontos { background: var(--danger-bg); border: 1px solid var(--danger-line); border-radius: 12px; padding: 4px 14px; margin-bottom: 12px; }
+  .auto-descontos .row { padding: 10px 0; }
+  .auto-descontos .rlabel { color: var(--text); }
+  .auto-descontos .rvalue { font-weight: 600; color: var(--coral); }
+
+  .checkbox-row, .panel-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 12px;
+  }
+  .checkbox-row label, .panel-row .rlabel { font-size: 15px; cursor: pointer; flex: 1; }
+  .checkbox-row input[type="checkbox"] { width: 24px; height: 24px; accent-color: var(--lime); flex: none; }
+
+  .unit-toggle { display: flex; background: var(--field); border-radius: 12px; overflow: hidden; border: 1px solid var(--line-strong); flex: none; }
+  .unit-toggle span { padding: 12px 14px; font-size: 14px; font-weight: 600; color: var(--text-2); cursor: pointer; user-select: none; }
+  .unit-toggle span.active { background: var(--lime); color: var(--lime-ink); }
+  .feedback-calc { font-size: 13px; color: var(--coral); font-weight: 600; text-align: right; min-height: 0; }
+
+  .dynrow { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .dynrow:last-child { border-bottom: none; }
+  .dr-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .dr-label { flex: 1; min-width: 0; border: 1px solid transparent; background: transparent; font: inherit; font-size: 16px; font-weight: 600; color: var(--text); padding: 8px; border-radius: 10px; }
+  .dr-label:focus { background: var(--field); border-color: var(--lime); outline: none; }
+  .dr-label::placeholder { color: #4B5361; }
+  .dr-remove { width: 32px; height: 32px; flex: none; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--coral); font-size: 18px; line-height: 1; cursor: pointer; }
+  .dr-fields { display: flex; gap: 8px; align-items: center; justify-content: flex-end; width: 100%; }
+  .dr-value { font-size: 14px; font-weight: 600; color: var(--text); text-align: right; margin-top: 8px; }
+  .dr-value:empty { display: none; }
+
+  .addrow { width: 100%; margin-top: 12px; padding: 13px; border: 1px dashed var(--line-strong); border-radius: 12px; background: transparent; color: var(--text-2); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .addrow:active { background: var(--surface-2); }
+
+  .subsection { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+
+  .resumo .row { padding: 11px 0; }
+  .resumo .row .rvalue { font-weight: 600; }
+  .resumo .row.total { border-top: 1px solid var(--line-strong); margin-top: 6px; padding-top: 14px; }
+  .resumo .row.total .rlabel, .resumo .row.total .rvalue { font-size: 18px; font-weight: 700; }
+  .resumo .row.info .rlabel { color: var(--text-2); }
+  .resumo .row.info .rvalue { color: var(--text-2); }
+
+  .btn { width: 100%; min-height: 48px; border-radius: 14px; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--text); }
+  .btn.primary { background: var(--lime); color: var(--lime-ink); border-color: var(--lime); }
+  .btn.danger { background: var(--coral); color: var(--lime-ink); border-color: var(--coral); }
+  .btn + .btn { margin-top: 10px; }
+
+  /* Barra de abas flutuante */
+  .tabbar {
+    position: fixed; left: 50%; transform: translateX(-50%); z-index: 30;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: min(456px, calc(100% - 24px)); display: flex; gap: 2px; padding: 5px;
+    background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 999px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  }
+  .tab-link {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0 7px;
+    border: none; border-radius: 999px; background: transparent; color: var(--text-2);
+    font: inherit; font-size: 11px; font-weight: 500; cursor: pointer; transition: background .2s ease, color .2s ease;
+  }
+  .tab-link.active { background: var(--lime); color: var(--lime-ink); font-weight: 600; }
+
+  :focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+  .field input:focus-visible, .field select:focus-visible, .dr-label:focus-visible { outline: none; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 8px);
+    width: max-content; max-width: calc(100% - 32px);
+    background: var(--text); color: var(--bg); font-size: 14px; font-weight: 500; padding: 12px 18px; border-radius: 12px;
+    opacity: 0; transition: opacity .25s ease, transform .25s ease; z-index: 80; pointer-events: none; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Confirmação de limpeza (substitui o confirm() nativo, que pode ser bloqueado) */
+  .sheet {
+    position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, 0.6);
+    display: flex; align-items: flex-end; justify-content: center;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  .sheet[hidden] { display: none; }
+  .sheet-box { width: 100%; max-width: 456px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 22px; padding: 20px; }
+
+  /* Nome da marca: botão sem aparência de botão (abre a tela Sobre) */
+  .brand-btn {
+    display: block; background: none; border: 0; margin: 0; padding: 4px 0; color: inherit; font: inherit;
+    font-size: 17px; font-weight: 600; letter-spacing: -0.01em; text-align: left;
+    cursor: default; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+
+  /* Tela Sobre */
+  .about { position: fixed; inset: 0; z-index: 70; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .about[hidden] { display: none; }
+  .about-wrap { max-width: 480px; margin: 0 auto; }
+  .about-bar {
+    position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 12px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
+    background: rgba(14, 17, 22, 0.88); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  }
+  .about-bar-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .about-body { padding: 8px 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
+  .about-card { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 26px 22px; margin-bottom: 14px; }
+  .about-card h1 { font-size: 27px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 18px; }
+  .about-card p { margin: 0 0 16px; font-size: 15.5px; line-height: 1.7; color: #C5CAD3; }
+  .about-card p.about-lead { font-size: 17px; line-height: 1.6; color: var(--text); }
+  .about-card p:last-of-type { margin-bottom: 0; }
+  .about-sign { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 14px; color: var(--text-2); }
+  .about-sign strong { display: block; margin-top: 4px; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); }
+  .about-mail { font-size: 16px; font-weight: 600; color: var(--lime); word-break: break-all; margin: 0 0 14px; user-select: all; -webkit-user-select: all; }
+  .about-foot { text-align: center; font-size: 12px; color: var(--text-2); margin: 20px 0 0; }
+</style>
+</head>
+<body>
+
+<div class="device">
+
+  <header class="topbar" id="topbar">
+    <div class="brand">
+      <button type="button" class="name brand-btn" id="openAbout" aria-label="Sobre o aplicativo">Verifica AI</button>
+      <div class="sub">Cálculo de contracheques</div>
+    </div>
+    <div class="mini" id="miniLiq">R$ 0,00</div>
+    <button class="iconbtn" data-act="share" aria-label="Compartilhar extrato">
+      <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+    </button>
+    <button class="iconbtn" data-act="reset" aria-label="Limpar dados">
+      <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+    </button>
+  </header>
+
+  <section class="hero" id="hero">
+    <div class="donut">
+      <svg viewBox="0 0 120 120" role="img" aria-label="Distribuição do salário bruto entre líquido e descontos">
+        <circle class="track" cx="60" cy="60" r="48"/>
+        <circle id="segLiq" cx="60" cy="60" r="48" stroke="#C6F432" stroke-dasharray="0 301.6" stroke-dashoffset="0"/>
+        <circle id="segDesc" cx="60" cy="60" r="48" stroke="#FF6B6B" stroke-dasharray="0 301.6" stroke-dashoffset="0"/>
+      </svg>
+      <div class="donut-center">
+        <div class="lbl">Líquido</div>
+        <div class="val" id="heroValue"><small>R$</small>0,00</div>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="lg total"><span class="l">Bruto</span><span class="v" id="lgBruto">R$ 0,00</span></div>
+      <div class="lg"><span class="l"><span class="dot" style="background:var(--lime)"></span><b>Líquido</b><em id="pLiq">0%</em></span><span class="v" id="lgLiq">R$ 0,00</span></div>
+      <div class="lg"><span class="l"><span class="dot" style="background:var(--coral)"></span><b>Descontos</b><em id="pDesc">0%</em></span><span class="v" id="lgDesc">R$ 0,00</span></div>
+    </div>
+  </section>
+
+  <main>
+    <!-- ABA 1: PERFIL -->
+    <div id="tab-perfil" class="tab-content active">
+      <div class="card">
+        <div class="card-title">Dados do contrato</div>
+        <div class="row">
+          <div class="rlabel">Salário base</div>
+          <div class="field wide"><span class="prefix">R$</span><input type="text" inputmode="decimal" id="salarioBase" placeholder="0,00"></div>
+        </div>
+        <div class="row">
+          <div class="rlabel">Salário mínimo vigente<small>Base do adicional de insalubridade</small></div>
+          <div class="field wide"><span class="prefix">R$</span><input type="text" inputmode="decimal" id="salarioMinimo" placeholder="1621,00" value="1621,00"></div>
+        </div>
+        <div class="row stack">
+          <div class="rlabel">Carga horária mensal (divisor)</div>
+          <div class="field full">
+            <select id="cargaHoraria">
+              <option value="0" disabled selected>Selecione a jornada...</option>
+              <option value="220">220 horas (44h semanais - Padrão CLT)</option>
+              <option value="200">200 horas (40h semanais)</option>
+              <option value="180">180 horas (36h semanais - Ex: Turnos)</option>
+              <option value="150">150 horas (30h semanais)</option>
+              <option value="120">120 horas (24h semanais)</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="rlabel">Dependentes (IRRF) <button class="help-btn" type="button" aria-label="Ajuda sobre dependentes" onclick="showHelp('dependentes')">?</button></div>
+          <div class="field small"><input type="text" inputmode="numeric" id="dependentes" placeholder="0" value="0"></div>
+        </div>
+        <div class="row result"><div class="rlabel">Valor da hora normal</div><div class="rvalue" id="valorHora">R$ 0,00</div></div>
+        <div class="row result"><div class="rlabel">Hora-base para extras e noturno<small>Inclui periculosidade ou insalubridade</small></div><div class="rvalue" id="valorHoraBase">R$ 0,00</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Rotina de trabalho</div>
+        <div class="card-sub">Dados informativos da sua jornada atual.</div>
+        <div class="row stack">
+          <div class="rlabel">Escala de trabalho</div>
+          <div class="field full">
+            <select id="escalaConfig">
+              <option value="5x2">5x2 (Segunda a Sexta)</option>
+              <option value="6x1">6x1 (Segunda a Sábado)</option>
+              <option value="12x36">12x36 (Plantão alternado)</option>
+              <option value="livre">Escala Livre / Flexível</option>
+            </select>
+          </div>
+        </div>
+        <div class="row stack">
+          <div class="rlabel">Batidas de ponto diárias</div>
+          <div class="field full">
+            <select id="batidasConfig">
+              <option value="2">2 batidas (Entrada e Saída diretas)</option>
+              <option value="4" selected>4 batidas (Inclui pausa para almoço)</option>
+              <option value="6">6 batidas (Pausas extras regulamentadas)</option>
+              <option value="0">Isento (Cargo de Confiança/Externo)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 2: MÊS ATUAL -->
+    <div id="tab-mensal" class="tab-content">
+      <div class="card">
+        <div class="card-title">Horas variáveis</div>
+        <div class="card-sub">Extras, noturno, interjornada e similares. Digite as horas como HH:MM e informe o calendário do mês para o cálculo exato do DSR.</div>
+        <div class="row">
+          <div class="rlabel">Dias úteis (inclui sábado)</div>
+          <div class="field small"><input type="text" inputmode="numeric" id="diasUteis" placeholder="26" value="26"></div>
+        </div>
+        <div class="row">
+          <div class="rlabel">Domingos e feriados</div>
+          <div class="field small"><input type="text" inputmode="numeric" id="domingosFeriados" placeholder="4" value="4"></div>
+        </div>
+
+        <div class="subsection">
+          <div class="row" style="border-bottom:none;padding-bottom:0">
+            <div class="rlabel">Adicional noturno (horas / %) <button class="help-btn" type="button" aria-label="Ajuda sobre adicional noturno" onclick="showHelp('noturno')">?</button></div>
+            <div style="display:flex;gap:8px">
+              <div class="field small"><input type="text" inputmode="numeric" autocomplete="off" id="horasNoturnas" placeholder="HH:MM"></div>
+              <div class="field pct"><input type="text" inputmode="decimal" id="pctNoturno" placeholder="20" value="20"><span class="suffix">%</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection" id="extrasContainer"></div>
+        <button class="addrow" id="addExtra">+ Adicionar horas</button>
+
+        <div class="row result" style="margin-top:14px">
+          <div class="rlabel">
+            DSR (reflexo remunerado)
+            <span class="formula-text" id="dsrFormula">R$ 0,00 ÷ 26 × 4</span>
+          </div>
+          <div class="rvalue" id="valDsr">R$ 0,00</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Ausências</div>
+        <div class="row">
+          <div class="rlabel">Faltas injustificadas (dias)</div>
+          <div class="field small"><input type="text" inputmode="numeric" id="faltasDias" placeholder="0" value="0"></div>
+        </div>
+        <div class="row">
+          <div class="rlabel">Semanas com falta<small>Cada semana com falta perde 1 DSR. Vazio: uma semana por dia de falta.</small></div>
+          <div class="field small"><input type="text" inputmode="numeric" id="faltasSemanas" placeholder="auto"></div>
+        </div>
+        <div class="row">
+          <div class="rlabel">Atestados (dias justificados)<small>Informativo: não geram desconto.</small></div>
+          <div class="field small"><input type="text" inputmode="numeric" id="atestadoDias" placeholder="0" value="0"></div>
+        </div>
+        <div class="row result"><div class="rlabel">Desconto (faltas + DSR perdido)</div><div class="rvalue neg-text" id="valFaltasDesc">R$ 0,00</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Banco de horas</div>
+        <div class="card-sub">Saldo do mês.</div>
+        <div class="row"><div class="rlabel">Horas positivas</div><div class="field small"><input type="text" inputmode="numeric" autocomplete="off" id="bhPositivo" placeholder="HH:MM"></div></div>
+        <div class="row"><div class="rlabel">Horas negativas</div><div class="field small"><input type="text" inputmode="numeric" autocomplete="off" id="bhNegativo" placeholder="HH:MM"></div></div>
+        <div class="row result"><div class="rlabel">Saldo do mês</div><div class="rvalue" id="bhAtual">00:00</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Outros proventos e adicionais fixos</div>
+        <div class="card-sub">Periculosidade e insalubridade não se acumulam. Proventos manuais entram na base de INSS, IRRF e FGTS.</div>
+
+        <div class="checkbox-row">
+          <label for="periculosidadeCheck">Adicional de periculosidade (30%)</label>
+          <input type="checkbox" id="periculosidadeCheck">
+        </div>
+
+        <div class="panel-row">
+          <div class="rlabel">Adicional de insalubridade</div>
+          <div class="field auto">
+            <select id="insalubridadeSel" style="text-align:right" aria-label="Grau de insalubridade">
+              <option value="0">Não se aplica</option>
+              <option value="10">Grau mínimo (10%)</option>
+              <option value="20">Grau médio (20%)</option>
+              <option value="40">Grau máximo (40%)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="proventosContainer"></div><button class="addrow" id="addProvento">+ Adicionar provento manual</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Descontos</div>
+        <div class="card-sub">INSS e IRRF calculados sobre o bruto menos as faltas, pelas tabelas de 2026.</div>
+        <div class="auto-descontos">
+          <div class="row"><div class="rlabel">INSS (automático)</div><div class="rvalue" id="autoInss">R$ 0,00</div></div>
+          <div class="row"><div class="rlabel">IRRF (automático)</div><div class="rvalue" id="autoIrrf">R$ 0,00</div></div>
+        </div>
+        <div class="checkbox-row">
+          <label for="vtCheck">Aplicar vale transporte (6%)</label>
+          <input type="checkbox" id="vtCheck">
+        </div>
+        <div id="descontosContainer"></div><button class="addrow" id="addDesconto">+ Adicionar desconto manual</button>
+      </div>
+    </div>
+
+    <!-- ABA 3: ANUAIS -->
+    <div id="tab-anual" class="tab-content">
+      <div class="card">
+        <div class="card-title">Férias e 13º salário</div>
+        <div class="card-sub">Calculado sobre salário base + adicionais fixos (periculosidade ou insalubridade). Férias incluem o 1/3 constitucional. Não considera média de horas extras.</div>
+        <div class="row"><div class="rlabel">Dias de férias a usufruir</div><div class="field small"><input type="text" inputmode="numeric" id="feriasDias" value="30"></div></div>
+        <div class="row result"><div class="rlabel">Férias líquidas (proporcionais)</div><div class="rvalue pos-text" id="simFerias">R$ 0,00</div></div>
+        <div class="row" style="margin-top:12px"><div class="rlabel">1ª parcela do 13º (adiantamento)</div><div class="rvalue" id="sim13p1">R$ 0,00</div></div>
+        <div class="row"><div class="rlabel">2ª parcela do 13º (líquida)</div><div class="rvalue" id="sim13p2">R$ 0,00</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Participação nos lucros (PLR)</div>
+        <div class="card-sub">Isento de INSS, com tabela exclusiva de IRRF. Considera um único pagamento no ano.</div>
+        <div class="row"><div class="rlabel">Valor bruto do PLR</div><div class="field wide"><span class="prefix">R$</span><input type="text" inputmode="decimal" id="plrBruto" placeholder="0,00"></div></div>
+        <div class="row result"><div class="rlabel">Desconto de IRRF (PLR)</div><div class="rvalue neg-text" id="plrIrrf">R$ 0,00</div></div>
+        <div class="row result"><div class="rlabel">PLR líquido</div><div class="rvalue pos-text" id="plrLiquido">R$ 0,00</div></div>
+      </div>
+    </div>
+
+    <!-- ABA 4: RESUMO -->
+    <div id="tab-resumo" class="tab-content">
+      <div class="card resumo">
+        <div class="card-title" style="margin-bottom:12px">Extrato detalhado do mês</div>
+        <div class="row"><div class="rlabel">Salário base</div><div class="rvalue" id="rSalario">R$ 0,00</div></div>
+        <div class="row"><div class="rlabel">Proventos variáveis e adicionais</div><div class="rvalue" id="rProventosTotais">R$ 0,00</div></div>
+        <div class="row total"><div class="rlabel">Salário bruto total</div><div class="rvalue" id="rBruto">R$ 0,00</div></div>
+        <div class="row" style="margin-top:12px"><div class="rlabel">Descontos</div><div class="rvalue" id="rDescTotais">R$ 0,00</div></div>
+        <div class="row info" style="padding-left:14px"><div class="rlabel">INSS</div><div class="rvalue" id="rInss">R$ 0,00</div></div>
+        <div class="row info" style="padding-left:14px"><div class="rlabel">IRRF</div><div class="rvalue" id="rIrrf">R$ 0,00</div></div>
+        <div class="row info" style="padding-left:14px"><div class="rlabel">Demais descontos<small>Faltas, vale transporte e lançamentos manuais</small></div><div class="rvalue" id="rDemais">R$ 0,00</div></div>
+        <div class="row info" style="margin-top:6px"><div class="rlabel">Base de INSS, IRRF e FGTS<small>Bruto menos faltas</small></div><div class="rvalue" id="rBase">R$ 0,00</div></div>
+        <div class="row info"><div class="rlabel">FGTS depositado (8%)</div><div class="rvalue" id="rFgts">R$ 0,00</div></div>
+      </div>
+      <button class="btn primary" data-act="share">Salvar extrato detalhado</button>
+      <button class="btn" data-act="reset">Limpar dados</button>
+    </div>
+  </main>
+</div>
+
+<nav class="tabbar" aria-label="Seções do app">
+  <button class="tab-link active" data-target="tab-perfil" aria-current="page">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil
+  </button>
+  <button class="tab-link" data-target="tab-mensal">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Mês
+  </button>
+  <button class="tab-link" data-target="tab-anual">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>Anuais
+  </button>
+  <button class="tab-link" data-target="tab-resumo">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Resumo
+  </button>
+</nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<section class="about" id="about" role="dialog" aria-modal="true" aria-labelledby="aboutTitle" hidden>
+  <div class="about-wrap">
+    <div class="about-bar">
+      <button class="iconbtn" id="aboutBack" type="button" aria-label="Voltar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="about-bar-title">Sobre o aplicativo</div>
+    </div>
+
+    <div class="about-body">
+      <article class="about-card">
+        <h1 id="aboutTitle">Obrigado pela confiança</h1>
+        <p class="about-lead">Agradeço de coração por ter escolhido o Verifica AI para conferir os cálculos do seu contracheque.</p>
+        <p>Entender de onde vem cada valor do próprio salário é um direito de todo trabalhador. Este aplicativo nasceu para tornar essa conferência simples, clara e acessível a qualquer pessoa, sem planilhas complicadas e sem depender de terceiros.</p>
+        <p>Esta aplicação não teria chegado até aqui sem muita dedicação, estudo e cuidado. Cada tabela, cada regra e cada detalhe foram revisados com o compromisso de entregar um resultado em que você possa confiar. Ser escolhido para uma tarefa tão importante quanto compreender a própria remuneração é algo que levo com enorme responsabilidade e gratidão.</p>
+        <p>Os valores apresentados são estimativas, baseadas na legislação e nas tabelas vigentes de 2026. Convenções coletivas, regras internas da empresa e situações particulares podem alterar o resultado. Por isso, use o Verifica AI como apoio e confirme sempre com o contracheque oficial e com o setor responsável da sua empresa.</p>
+        <p>Tudo o que você digita fica guardado apenas no seu aparelho. Sua informação é sua.</p>
+        <p>Sugestões, dúvidas e correções são sempre muito bem-vindas: elas ajudam este projeto a ficar melhor a cada versão.</p>
+        <div class="about-sign">Com gratidão,<strong>Gabriel Lira</strong></div>
+      </article>
+
+      <div class="card">
+        <div class="card-title">Fale comigo</div>
+        <div class="card-sub">Caso queira entrar em contato para tirar dúvidas, escreva para:</div>
+        <div class="about-mail" id="aboutMail">contact.gabriellira@gmail.com</div>
+        <button class="btn primary" id="copyMail" type="button">Copiar e-mail</button>
+      </div>
+
+      <p class="about-foot">Verifica AI · Cálculo de contracheques</p>
+    </div>
+  </div>
+</section>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-box" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="card-title" id="sheetTitle">Limpar todos os dados?</div>
+    <p class="card-sub">Salário, horas, descontos e lançamentos manuais serão apagados deste aparelho.</p>
+    <button class="btn danger" id="sheetOk" type="button">Limpar dados</button>
+    <button class="btn" id="sheetCancel" type="button">Cancelar</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var STORAGE_KEY = 'verificaai_tabs_v8';
+  var uid = function() { return 'id_' + Math.random().toString(36).substr(2, 9); };
+  var last = null;
+
+  /* ---------- Abas ---------- */
+  var tabs = document.querySelectorAll('.tab-link');
+  var contents = document.querySelectorAll('.tab-content');
+  tabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      tabs.forEach(function(t) { t.classList.remove('active'); t.removeAttribute('aria-current'); });
+      contents.forEach(function(c) { c.classList.remove('active'); });
+      this.classList.add('active');
+      this.setAttribute('aria-current', 'page');
+      document.getElementById(this.dataset.target).classList.add('active');
+      window.scrollTo(0, 0);
+    });
+  });
+
+  /* Mostra o líquido na barra superior quando a rosca sai da tela */
+  var topbar = document.getElementById('topbar');
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function(entries) {
+      topbar.classList.toggle('scrolled', !entries[0].isIntersecting);
+    }, { rootMargin: '-64px 0px 0px 0px' }).observe(document.getElementById('hero'));
+  } else {
+    topbar.classList.add('scrolled');
+  }
+
+  /* ---------- Estado ---------- */
+  function defaultState(){
+    return {
+      base: {salarioBase:'', salarioMinimo:'1621,00', cargaHoraria:'0', dependentes:'0', escala:'5x2', batidas:'4', diasUteis:'26', domingosFeriados:'4', horasNoturnas:'', pctNoturno:'20'},
+      extras: [{id: uid(), label: 'Hora extra', qtd: '', pct: '50'}],
+      proventos: [], descontos: [],
+      ferias: { dias: '30' }, plr: { valor: '' }, banco: { pos: '', neg: '' },
+      faltas: { injustificadas: '0', semanas: '', atestados: '0' },
+      fixos: { periculosidade: false, insalubridade: '0' },
+      vt: false
+    };
+  }
+
+  /* Mescla o que foi salvo com os padrões: evita erro com dados de versões antigas */
+  function mergeState(saved){
+    var def = defaultState();
+    if (!saved || typeof saved !== 'object') return def;
+    ['base', 'ferias', 'plr', 'banco', 'faltas', 'fixos'].forEach(function(k){
+      def[k] = Object.assign({}, def[k], saved[k] || {});
+    });
+    ['extras', 'proventos', 'descontos'].forEach(function(k){
+      if (Array.isArray(saved[k])) def[k] = saved[k];
+    });
+    def.vt = !!saved.vt;
+    if (!def.base.salarioMinimo) def.base.salarioMinimo = '1621,00';
+    if (def.fixos.periculosidade && String(def.fixos.insalubridade) !== '0') def.fixos.insalubridade = '0';
+    return def;
+  }
+
+  var state = defaultState();
+  try { var raw = localStorage.getItem(STORAGE_KEY); if (raw) state = mergeState(JSON.parse(raw)); } catch(e) {}
+
+  function saveState(){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {} }
+
+  /* ---------- Tabelas 2026 ---------- */
+  function r2(v){ return Math.round((v + Number.EPSILON) * 100) / 100; }
+
+  /* INSS empregado (Portaria Interministerial MPS/MF nº 13/2026). Teto: R$ 8.475,55 → contribuição máxima R$ 988,09 */
+  var INSS_FAIXAS = [
+    { ate: 1621.00, aliq: 0.075 },
+    { ate: 2902.84, aliq: 0.09 },
+    { ate: 4354.27, aliq: 0.12 },
+    { ate: 8475.55, aliq: 0.14 }
+  ];
+  function calcINSS(bruto) {
+    if (bruto <= 0) return 0;
+    var b = Math.min(bruto, INSS_FAIXAS[INSS_FAIXAS.length - 1].ate), prev = 0, total = 0;
+    for (var i = 0; i < INSS_FAIXAS.length; i++) {
+      if (b > prev) total += (Math.min(b, INSS_FAIXAS[i].ate) - prev) * INSS_FAIXAS[i].aliq;
+      prev = INSS_FAIXAS[i].ate;
+    }
+    return r2(total);
+  }
+
+  /* IRRF mensal 2026 (Lei 15.270/2025): tabela progressiva + redução mensal sobre o rendimento tributável */
+  var IRRF_DEP = 189.59, IRRF_SIMPLIFICADO = 607.20;
+  var IRRF_FAIXAS = [
+    { ate: 2428.80,  aliq: 0,     ded: 0 },
+    { ate: 2826.65,  aliq: 0.075, ded: 182.16 },
+    { ate: 3751.05,  aliq: 0.15,  ded: 394.16 },
+    { ate: 4664.68,  aliq: 0.225, ded: 675.49 },
+    { ate: Infinity, aliq: 0.275, ded: 908.73 }
+  ];
+  function calcIRRF(rendTributavel, inss, dependentes) {
+    if (rendTributavel <= 0) return 0;
+    var deducao = Math.max(inss + Math.floor(dependentes) * IRRF_DEP, IRRF_SIMPLIFICADO);
+    var base = Math.max(rendTributavel - deducao, 0), imposto = 0;
+    for (var i = 0; i < IRRF_FAIXAS.length; i++) {
+      if (base <= IRRF_FAIXAS[i].ate) { imposto = base * IRRF_FAIXAS[i].aliq - IRRF_FAIXAS[i].ded; break; }
+    }
+    imposto = r2(Math.max(imposto, 0));
+    var reducao = 0;
+    if (rendTributavel <= 5000) reducao = 312.89;
+    else if (rendTributavel <= 7350) reducao = 978.62 - 0.133145 * rendTributavel;
+    return r2(Math.max(imposto - r2(Math.max(reducao, 0)), 0));
+  }
+
+  function calcIRRF_PLR(bruto) {
+    if (bruto <= 7640.80) return 0;
+    if (bruto <= 9922.28) return (bruto * 0.075) - 573.06;
+    if (bruto <= 13167.00) return (bruto * 0.15) - 1317.23;
+    if (bruto <= 16380.38) return (bruto * 0.225) - 2304.76;
+    return (bruto * 0.275) - 3123.78;
+  }
+
+  /* ---------- Utilitários ---------- */
+  var HORA_IDS = ['horasNoturnas', 'bhPositivo', 'bhNegativo'];
+
+  /* Máscara HH:MM. Enquanto digita: "230" vira "2:30". Ao sair do campo (final), vira "02:30". */
+  function maskHoras(v, final) {
+    v = String(v == null ? '' : v).replace(/[,.]/g, ':');
+    var out = '', manual = false;
+    if (v.indexOf(':') !== -1) {
+      var p = v.split(':');
+      var mRaw = p.slice(1).join('').replace(/\D/g, '');
+      if (mRaw.length <= 2) {
+        manual = true;
+        out = p[0].replace(/\D/g, '').slice(0, 3) + ':' + mRaw;
+      }
+    }
+    if (!manual) {
+      var d = v.replace(/\D/g, '').slice(0, 5);
+      out = d.length <= 2 ? d : d.slice(0, d.length - 2) + ':' + d.slice(-2);
+    }
+    if (!final) return out;
+    if (out === '' || out === ':') return '';
+    var q = out.split(':');
+    var h = q[0] === '' ? '0' : String(parseInt(q[0], 10));
+    var m = q[1] || '';
+    while (m.length < 2) m = '0' + m;
+    if (parseInt(m, 10) > 59) m = '59';
+    return (h.length < 2 ? '0' + h : h) + ':' + m;
+  }
+
+  /* Horas → minutos inteiros (evita erros de arredondamento com frações de hora) */
+  function parseMin(str) {
+    if (!str) return 0;
+    var p = String(str).trim().replace(/[,.]/g, ':').split(':');
+    var h = parseInt(p[0], 10) || 0;
+    var m = parseInt((p[1] || '').replace(/\D/g, '').slice(0, 2) || '0', 10) || 0;
+    return h * 60 + Math.min(m, 59);
+  }
+
+  function fmtMin(min) {
+    var sign = min < 0 ? '-' : ''; min = Math.abs(Math.round(min));
+    var h = Math.floor(min / 60), m = min % 60;
+    return sign + (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  }
+
+  /* Aceita "1.621,00", "1621,00", "1621.50" e "1.621" */
+  function num(str){
+    var s = String(str == null ? '' : str).trim().replace(/[^\d.,\-]/g, '');
+    if (s.indexOf(',') !== -1) s = s.replace(/\./g, '').replace(',', '.');
+    else if ((s.match(/\./g) || []).length > 1 || /\.\d{3}$/.test(s)) s = s.replace(/\./g, '');
+    var v = parseFloat(s);
+    return isNaN(v) ? 0 : v;
+  }
+  /* Campo vazio usa o padrão; um "0" digitado é respeitado */
+  function numOr(str, def){ return String(str == null ? '' : str).trim() === '' ? def : num(str); }
+
+  function brl(v){ if (Math.abs(v) < 0.005) v = 0; return v.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+  function esc(str){ var d = document.createElement('div'); d.textContent = str == null ? '' : str; return d.innerHTML.replace(/"/g, '&quot;'); }
+  function setTxt(id, txt) { var el = document.getElementById(id); if(el) el.textContent = txt; }
+
+  function nomeExtra(ext) {
+    var n = String(ext.label || '').replace(/\s*\d+([.,]\d+)?\s*%\s*$/, '').trim() || 'Hora extra';
+    return n + ' ' + (ext.pct || 0) + '%';
+  }
+
+  var tTm = null;
+  function showToast(msg, ms){
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    if (tTm) clearTimeout(tTm);
+    tTm = setTimeout(function() { t.classList.remove('show'); }, ms || 3200);
+  }
+
+  window.showHelp = function(type) {
+    var helps = {
+      'dependentes': 'Cada dependente reduz a base do IRRF em R$ 189,59, quando isso supera o desconto simplificado de R$ 607,20.',
+      'noturno': 'O adicional noturno incide sobre as horas trabalhadas no período noturno e integra a base de cálculo do DSR.'
+    };
+    showToast(helps[type] || '?', 4500);
+  };
+
+  /* ---------- Rosca ---------- */
+  var DONUT_C = 2 * Math.PI * 48;
+  function updateDonut(liq, desc) {
+    var parts = [Math.max(liq, 0), Math.max(desc, 0)];
+    var ids = ['segLiq', 'segDesc'], pids = ['pLiq', 'pDesc'];
+    var sum = parts[0] + parts[1], cum = 0;
+    for (var i = 0; i < ids.length; i++) {
+      var share = sum > 0 ? parts[i] / sum : 0;
+      var len = share * DONUT_C;
+      var el = document.getElementById(ids[i]);
+      if (el) {
+        el.setAttribute('stroke-dasharray', len + ' ' + (DONUT_C - len));
+        el.setAttribute('stroke-dashoffset', -cum);
+      }
+      setTxt(pids[i], Math.round(share * 100) + '%');
+      cum += len;
+    }
+  }
+
+  /* ---------- Listas dinâmicas ---------- */
+  function renderDyn(cont, arr, kind){
+    if(!cont) return;
+    var html = '';
+    for(var i=0; i<arr.length; i++){
+      var item = arr[i], fields = '', ph = kind === 'extra' ? 'Ex.: Hora extra, Interjornada' : 'Descrição';
+      if (kind === 'extra') {
+        fields = '<div class="dr-fields"><div class="field small"><input data-field="qtd" inputmode="numeric" autocomplete="off" aria-label="Horas" value="'+esc(maskHoras(item.qtd, true))+'" placeholder="HH:MM"></div><div class="field pct"><input data-field="pct" inputmode="decimal" aria-label="Percentual" value="'+esc(item.pct)+'"><span class="suffix">%</span></div></div><div class="dr-value" id="val-'+item.id+'"></div>';
+      } else if (kind === 'desconto') {
+        var tp = item.tipo || 'BRL';
+        fields = '<div class="dr-fields">' +
+                   '<div class="unit-toggle" data-action="toggle-unit" data-id="'+item.id+'">' +
+                     '<span class="'+(tp==='BRL'?'active':'')+'" data-tipo="BRL">R$</span>' +
+                     '<span class="'+(tp==='PCT'?'active':'')+'" data-tipo="PCT">%</span>' +
+                   '</div>' +
+                   '<div class="field" style="flex:1;"><input data-field="valor" inputmode="decimal" aria-label="Valor" value="'+esc(item.valor)+'" placeholder="0,00"></div>' +
+                 '</div><div class="dr-value feedback-calc" id="feed-'+item.id+'"></div>';
+      } else {
+        fields = '<div class="dr-fields"><div class="field wide"><span class="prefix">R$</span><input data-field="valor" inputmode="decimal" aria-label="Valor" value="'+esc(item.valor)+'" placeholder="0,00"></div></div>';
+      }
+      html += '<div class="dynrow" data-id="'+item.id+'"><div class="dr-top"><input class="dr-label" data-field="label" aria-label="Descrição" value="'+esc(item.label)+'" placeholder="'+ph+'"><button class="dr-remove" type="button" data-remove="'+item.id+'" aria-label="Remover">&times;</button></div>'+fields+'</div>';
+    }
+    cont.innerHTML = html;
+  }
+
+  function renderLists(){
+    renderDyn(document.getElementById('extrasContainer'), state.extras, 'extra');
+    renderDyn(document.getElementById('proventosContainer'), state.proventos, 'provento');
+    renderDyn(document.getElementById('descontosContainer'), state.descontos, 'desconto');
+  }
+
+  /* ---------- Cálculo (sem tocar no DOM) ---------- */
+  function calc(){
+    var s = state, b = s.base;
+    var base = num(b.salarioBase);
+    var minimo = numOr(b.salarioMinimo, 1621) || 1621;
+    var dep = Math.max(Math.floor(num(b.dependentes)), 0);
+    var ch = num(b.cargaHoraria);
+    var dUteis = Math.max(numOr(b.diasUteis, 26), 1);
+    var dDom = Math.max(numOr(b.domingosFeriados, 4), 0);
+
+    // Adicionais fixos e hora-base (extras e noturno incidem sobre salário + periculosidade/insalubridade)
+    var valPeric = s.fixos.periculosidade ? r2(base * 0.30) : 0;
+    var valInsal = r2(minimo * num(s.fixos.insalubridade) / 100);
+    var remFixa = base + valPeric + valInsal;
+    var vHora = ch > 0 ? base / ch : 0;
+    var vHoraBase = ch > 0 ? remFixa / ch : 0;
+
+    // Adicional noturno
+    var minNot = parseMin(b.horasNoturnas);
+    var pctNot = numOr(b.pctNoturno, 20);
+    var valNot = r2((minNot / 60) * vHoraBase * (pctNot / 100));
+
+    // Horas extras
+    var extrasL = [], tExt = 0;
+    s.extras.forEach(function(e){
+      var min = parseMin(e.qtd);
+      var v = r2((min / 60) * vHoraBase * (1 + num(e.pct) / 100));
+      tExt += v;
+      extrasL.push({ id: e.id, nome: nomeExtra(e), horas: maskHoras(e.qtd, true), min: min, valor: v });
+    });
+
+    // DSR sobre extras + noturno
+    var baseDsr = tExt + valNot;
+    var dsr = r2(baseDsr / dUteis * dDom);
+
+    // Proventos manuais
+    var provL = [], tProv = 0;
+    s.proventos.forEach(function(p){ var v = num(p.valor); tProv += v; provL.push({ nome: p.label || 'Outro provento', valor: v }); });
+
+    var bruto = r2(base + tExt + valNot + dsr + valPeric + valInsal + tProv);
+
+    // Faltas: 1 dia por falta + 1 DSR por semana com falta (sobre a remuneração fixa)
+    var dF = Math.min(Math.max(num(s.faltas.injustificadas), 0), 30);
+    var sem = Math.min(Math.max(numOr(s.faltas.semanas, dF), 0), dF);
+    var descFaltas = r2(Math.min((dF + sem) * remFixa / 30, remFixa));
+
+    // INSS, IRRF e FGTS incidem sobre o bruto menos as faltas
+    var baseTrib = Math.max(bruto - descFaltas, 0);
+    var inss = calcINSS(baseTrib);
+    var irrf = calcIRRF(baseTrib, inss, dep);
+    var fgts = r2(baseTrib * 0.08);
+
+    var vt = s.vt ? r2(base * 0.06) : 0;
+    var descL = [], tDescM = 0;
+    s.descontos.forEach(function(d){
+      var vIns = num(d.valor);
+      var vCalc = d.tipo === 'PCT' ? r2(base * (vIns / 100)) : vIns;
+      tDescM += vCalc;
+      descL.push({ id: d.id, nome: d.label || 'Outro desconto', tipo: d.tipo, valorInformado: d.valor, valInput: vIns, valor: vCalc });
+    });
+
+    var outros = r2(tDescM + descFaltas + vt);
+    var descTotais = r2(outros + inss + irrf);
+    var liq = r2(bruto - descTotais);
+
+    // Férias (com 1/3) e 13º
+    var dFer = Math.min(Math.max(numOr(s.ferias.dias, 30), 1), 30);
+    var ferB = r2(remFixa / 30 * dFer * 4 / 3);
+    var inssF = calcINSS(ferB);
+    var ferLiq = r2(ferB - inssF - calcIRRF(ferB, inssF, dep));
+    var p1 = r2(remFixa * 0.5);
+    var inss13 = calcINSS(remFixa);
+    var p2 = r2(remFixa - p1 - inss13 - calcIRRF(remFixa, inss13, dep));
+
+    // PLR e banco de horas
+    var plrB = num(s.plr.valor), plrI = r2(calcIRRF_PLR(plrB));
+    var bhMin = parseMin(s.banco.pos) - parseMin(s.banco.neg);
+
+    return {
+      base: base, minimo: minimo, ch: ch, dUteis: dUteis, dDom: dDom, vHora: vHora, vHoraBase: vHoraBase,
+      valPeric: valPeric, valInsal: valInsal, insalPct: num(s.fixos.insalubridade),
+      minNot: minNot, pctNot: pctNot, valNot: valNot, extrasL: extrasL, tExt: tExt, baseDsr: baseDsr, dsr: dsr,
+      provL: provL, tProv: tProv, bruto: bruto, dF: dF, descFaltas: descFaltas, baseTrib: baseTrib,
+      inss: inss, irrf: irrf, fgts: fgts, vt: vt, descL: descL, outros: outros, descTotais: descTotais, liq: liq,
+      ferLiq: ferLiq, p1: p1, p2: p2, plrI: plrI, plrLiq: r2(plrB - plrI), bhMin: bhMin
+    };
+  }
+
+  /* ---------- Exibição ---------- */
+  function render(r){
+    setTxt('valFaltasDesc', 'R$ ' + brl(r.descFaltas));
+    r.extrasL.forEach(function(e){ setTxt('val-' + e.id, e.valor > 0 ? 'R$ ' + brl(e.valor) : ''); });
+    setTxt('dsrFormula', 'R$ ' + brl(r.baseDsr) + ' ÷ ' + r.dUteis + ' × ' + r.dDom);
+    setTxt('valDsr', 'R$ ' + brl(r.dsr));
+    r.descL.forEach(function(d){ setTxt('feed-' + d.id, d.tipo === 'PCT' ? '- R$ ' + brl(d.valor) : ''); });
+    setTxt('autoInss', 'R$ ' + brl(r.inss)); setTxt('autoIrrf', 'R$ ' + brl(r.irrf));
+
+    setTxt('simFerias', 'R$ ' + brl(r.ferLiq));
+    setTxt('sim13p1', 'R$ ' + brl(r.p1)); setTxt('sim13p2', 'R$ ' + brl(r.p2));
+    setTxt('plrIrrf', 'R$ ' + brl(r.plrI)); setTxt('plrLiquido', 'R$ ' + brl(r.plrLiq));
+    setTxt('bhAtual', fmtMin(r.bhMin));
+
+    setTxt('valorHora', 'R$ ' + brl(r.vHora));
+    setTxt('valorHoraBase', 'R$ ' + brl(r.vHoraBase));
+    setTxt('rSalario', 'R$ ' + brl(r.base));
+    setTxt('rProventosTotais', 'R$ ' + brl(r.bruto - r.base));
+    setTxt('rBruto', 'R$ ' + brl(r.bruto)); setTxt('rDescTotais', 'R$ ' + brl(r.descTotais));
+    setTxt('rInss', 'R$ ' + brl(r.inss)); setTxt('rIrrf', 'R$ ' + brl(r.irrf));
+    setTxt('rDemais', 'R$ ' + brl(r.outros));
+    setTxt('rBase', 'R$ ' + brl(r.baseTrib));
+    setTxt('rFgts', 'R$ ' + brl(r.fgts));
+
+    var liqStr = brl(r.liq);
+    var hv = document.getElementById('heroValue');
+    hv.innerHTML = '<small>R$</small>' + liqStr;
+    hv.style.fontSize = liqStr.length > 9 ? '15px' : '19px';
+    setTxt('miniLiq', 'R$ ' + liqStr);
+    setTxt('lgBruto', 'R$ ' + brl(r.bruto));
+    setTxt('lgLiq', 'R$ ' + liqStr);
+    setTxt('lgDesc', 'R$ ' + brl(r.descTotais));
+    updateDonut(r.liq, r.descTotais);
+  }
+
+  function compute(){
+    last = calc();
+    render(last);
+    saveState();
+  }
+
+  /* ---------- Ligação dos campos ao estado ---------- */
+  var BIND = {
+    salarioBase: ['base', 'salarioBase'], salarioMinimo: ['base', 'salarioMinimo'],
+    cargaHoraria: ['base', 'cargaHoraria'], dependentes: ['base', 'dependentes'],
+    escalaConfig: ['base', 'escala'], batidasConfig: ['base', 'batidas'],
+    diasUteis: ['base', 'diasUteis'], domingosFeriados: ['base', 'domingosFeriados'],
+    horasNoturnas: ['base', 'horasNoturnas'], pctNoturno: ['base', 'pctNoturno'],
+    feriasDias: ['ferias', 'dias'], plrBruto: ['plr', 'valor'],
+    bhPositivo: ['banco', 'pos'], bhNegativo: ['banco', 'neg'],
+    faltasDias: ['faltas', 'injustificadas'], faltasSemanas: ['faltas', 'semanas'], atestadoDias: ['faltas', 'atestados']
+  };
+
+  function loadUI(){
+    Object.keys(BIND).forEach(function(id){
+      var el = document.getElementById(id); if (!el) return;
+      var v = state[BIND[id][0]][BIND[id][1]];
+      el.value = v == null ? '' : v;
+      if (HORA_IDS.indexOf(id) !== -1) el.value = maskHoras(el.value, true);
+    });
+    document.getElementById('insalubridadeSel').value = state.fixos.insalubridade || '0';
+    document.getElementById('periculosidadeCheck').checked = !!state.fixos.periculosidade;
+    document.getElementById('vtCheck').checked = !!state.vt;
+    renderLists();
+    compute();
+  }
+
+  Object.keys(BIND).forEach(function(id){
+    var el = document.getElementById(id); if (!el) return;
+    var g = BIND[id][0], k = BIND[id][1];
+    el.addEventListener('input', function(){
+      if (HORA_IDS.indexOf(id) !== -1) { var mv = maskHoras(el.value); if (mv !== el.value) el.value = mv; }
+      state[g][k] = el.value;
+      compute();
+    });
+    if (HORA_IDS.indexOf(id) !== -1) {
+      el.addEventListener('change', function(){
+        el.value = maskHoras(el.value, true);
+        state[g][k] = el.value;
+        compute();
+      });
+    }
+  });
+
+  /* Periculosidade e insalubridade não se acumulam (CLT, art. 193, § 2º) */
+  document.getElementById('insalubridadeSel').addEventListener('change', function(e){
+    state.fixos.insalubridade = e.target.value;
+    if (e.target.value !== '0' && state.fixos.periculosidade) {
+      state.fixos.periculosidade = false;
+      document.getElementById('periculosidadeCheck').checked = false;
+      showToast('Insalubridade e periculosidade não se acumulam. Mantive só a insalubridade.', 4500);
+    }
+    compute();
+  });
+  document.getElementById('periculosidadeCheck').addEventListener('change', function(e){
+    state.fixos.periculosidade = e.target.checked;
+    if (e.target.checked && state.fixos.insalubridade !== '0') {
+      state.fixos.insalubridade = '0';
+      document.getElementById('insalubridadeSel').value = '0';
+      showToast('Insalubridade e periculosidade não se acumulam. Mantive só a periculosidade.', 4500);
+    }
+    compute();
+  });
+  document.getElementById('vtCheck').addEventListener('change', function(e){ state.vt = e.target.checked; compute(); });
+
+  function setupList(id, key){
+    var c = document.getElementById(id); if(!c) return;
+    c.addEventListener('input', function(e){
+      if(e.target.dataset.field){
+        if(e.target.dataset.field === 'qtd'){ var mq = maskHoras(e.target.value); if(mq !== e.target.value) e.target.value = mq; }
+        var row = e.target.closest('.dynrow'), arr = state[key];
+        for(var i=0; i<arr.length; i++) if(arr[i].id === row.dataset.id) { arr[i][e.target.dataset.field] = e.target.value; compute(); break; }
+      }
+    });
+    c.addEventListener('change', function(e){
+      if(e.target.dataset && e.target.dataset.field === 'qtd'){
+        var v = maskHoras(e.target.value, true); e.target.value = v;
+        var row = e.target.closest('.dynrow'), arr = state[key];
+        for(var i=0; i<arr.length; i++) if(arr[i].id === row.dataset.id) { arr[i].qtd = v; compute(); break; }
+      }
+    });
+    c.addEventListener('click', function(e){
+      var btn = e.target.closest('[data-remove]');
+      if(btn) {
+        var arr = state[key]; for(var i=0; i<arr.length; i++) if(arr[i].id === btn.dataset.remove) { arr.splice(i,1); renderLists(); compute(); break; }
+        return;
+      }
+      if(e.target.tagName==='SPAN' && e.target.parentElement.dataset.action==='toggle-unit'){
+        var aid = e.target.parentElement.dataset.id, arrT = state[key];
+        for(var j=0; j<arrT.length; j++) if(arrT[j].id===aid) { arrT[j].tipo = e.target.dataset.tipo; renderLists(); compute(); break; }
+      }
+    });
+  }
+  setupList('extrasContainer','extras'); setupList('proventosContainer','proventos'); setupList('descontosContainer','descontos');
+
+  function addItem(key, item, containerId){
+    state[key].push(item); renderLists(); compute();
+    var lbl = document.querySelector('#' + containerId + ' .dynrow:last-child .dr-label');
+    if (lbl) lbl.focus();
+  }
+  document.getElementById('addExtra').addEventListener('click', function(){ addItem('extras', {id:uid(), label:'', qtd:'', pct:'50'}, 'extrasContainer'); });
+  document.getElementById('addProvento').addEventListener('click', function(){ addItem('proventos', {id:uid(), label:'', valor:''}, 'proventosContainer'); });
+  document.getElementById('addDesconto').addEventListener('click', function(){ addItem('descontos', {id:uid(), label:'', valor:'', tipo:'BRL'}, 'descontosContainer'); });
+
+  /* ---------- Limpar dados (com confirmação própria) ---------- */
+  var sheet = document.getElementById('sheet');
+  function openSheet(){ sheet.hidden = false; document.getElementById('sheetCancel').focus(); }
+  function closeSheet(){ sheet.hidden = true; }
+  document.getElementById('sheetCancel').addEventListener('click', closeSheet);
+  sheet.addEventListener('click', function(e){ if (e.target === sheet) closeSheet(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !sheet.hidden) closeSheet(); });
+  document.getElementById('sheetOk').addEventListener('click', function(){
+    state = defaultState(); loadUI(); closeSheet(); showToast('Dados limpos.');
+  });
+
+  /* ---------- Compartilhar extrato ---------- */
+  function buildExtrato(){
+    var r = last || calc();
+    var pad2 = function(n) { return (n < 10 ? '0' : '') + n; };
+    var hoje = new Date();
+    var dataStr = pad2(hoje.getDate()) + '/' + pad2(hoje.getMonth() + 1) + '/' + hoje.getFullYear();
+    var SEP = '----------------------------------------';
+    var R = function(v){ return 'R$ ' + brl(v); };
+    var L = [];
+
+    L.push('DEMONSTRATIVO DE CÁLCULO SALARIAL');
+    L.push('Emitido em ' + dataStr);
+    L.push(SEP);
+    L.push('PROVENTOS');
+    L.push('Salário base: ' + R(r.base));
+    if (r.minNot > 0) L.push('Adicional noturno ' + r.pctNot + '% (' + fmtMin(r.minNot) + 'h): ' + R(r.valNot));
+    if (r.valPeric > 0) L.push('Adicional de periculosidade (30% sobre o salário base): ' + R(r.valPeric));
+    if (r.valInsal > 0) L.push('Adicional de insalubridade (' + r.insalPct + '% sobre o salário mínimo): ' + R(r.valInsal));
+    r.extrasL.forEach(function(e){ if (e.min > 0) L.push(e.nome + ' (' + e.horas + 'h): ' + R(e.valor)); });
+    if (r.baseDsr > 0) L.push('DSR (' + R(r.baseDsr) + ' ÷ ' + r.dUteis + ' × ' + r.dDom + '): ' + R(r.dsr));
+    r.provL.forEach(function(p){ if (p.valor > 0) L.push(p.nome + ': ' + R(p.valor)); });
+    L.push('Total de proventos (bruto): ' + R(r.bruto));
+
+    L.push('');
+    L.push('DESCONTOS');
+    L.push('INSS: ' + R(r.inss));
+    L.push('IRRF: ' + R(r.irrf));
+    if (r.dF > 0) L.push('Faltas injustificadas (' + r.dF + (r.dF === 1 ? ' dia' : ' dias') + ', com DSR perdido): ' + R(r.descFaltas));
+    if (r.vt > 0) L.push('Vale transporte (6%): ' + R(r.vt));
+    r.descL.forEach(function(d){
+      if (d.valInput > 0) L.push(d.nome + (d.tipo === 'PCT' ? ' (' + d.valorInformado + '%)' : '') + ': ' + R(d.valor));
+    });
+    L.push('Total de descontos: ' + R(r.descTotais));
+
+    L.push(SEP);
+    L.push('LÍQUIDO A RECEBER: ' + R(r.liq));
+    L.push(SEP);
+
+    L.push('INFORMAÇÕES COMPLEMENTARES');
+    if (r.ch > 0) {
+      L.push('Carga horária mensal: ' + r.ch + 'h');
+      L.push('Valor da hora normal: ' + R(r.vHora));
+    }
+    L.push('Dias úteis: ' + r.dUteis + ' | Domingos e feriados: ' + r.dDom);
+    if (r.descFaltas > 0) L.push('Base de INSS, IRRF e FGTS (bruto menos faltas): ' + R(r.baseTrib));
+    L.push('FGTS (depósito do empregador, 8%): ' + R(r.fgts));
+    L.push('');
+    L.push('Valores estimados, sujeitos à conferência com o contracheque oficial.');
+    L.push('Gerado por Verifica AI.');
+    return L.join('\n');
+  }
+
+  function copyText(texto){
+    return new Promise(function(resolve, reject){
+      function legacy(){
+        var ta = document.createElement('textarea');
+        ta.value = texto; ta.style.position = 'fixed'; ta.style.top = '-9999px';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (err) {}
+        document.body.removeChild(ta);
+        ok ? resolve() : reject();
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(resolve, legacy);
+      else legacy();
+    });
+  }
+
+  function doShare(){
+    var texto = buildExtrato();
+    var copiar = function(){
+      copyText(texto).then(
+        function(){ showToast('Extrato detalhado copiado.'); },
+        function(){ showToast('Não foi possível copiar. Tente de novo.'); }
+      );
+    };
+    if (navigator.share) {
+      navigator.share({ title: 'Demonstrativo de cálculo salarial', text: texto }).catch(function(err){
+        if (err && err.name === 'AbortError') return; // a pessoa fechou a janela de compartilhar
+        copiar();
+      });
+    } else {
+      copiar();
+    }
+  }
+
+  document.querySelectorAll('[data-act="share"]').forEach(function(b){ b.addEventListener('click', doShare); });
+  document.querySelectorAll('[data-act="reset"]').forEach(function(b){ b.addEventListener('click', openSheet); });
+
+  /* ---------- Sobre o aplicativo ---------- */
+  var about = document.getElementById('about');
+  var openAboutBtn = document.getElementById('openAbout');
+  function openAbout(){
+    about.hidden = false; about.scrollTop = 0;
+    document.body.style.overflow = 'hidden';
+    document.getElementById('aboutBack').focus();
+  }
+  function closeAbout(){
+    about.hidden = true;
+    document.body.style.overflow = '';
+    openAboutBtn.focus();
+  }
+  openAboutBtn.addEventListener('click', openAbout);
+  document.getElementById('aboutBack').addEventListener('click', closeAbout);
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !about.hidden) closeAbout(); });
+  document.getElementById('copyMail').addEventListener('click', function(){
+    copyText('contact.gabriellira@gmail.com').then(
+      function(){ showToast('E-mail copiado.'); },
+      function(){ showToast('Não foi possível copiar. Selecione o e-mail e copie manualmente.', 4500); }
+    );
+  });
+
+  loadUI();
+})();
+</script>
+</body>
+</html>
