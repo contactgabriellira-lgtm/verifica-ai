@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Verifica AI · Calculadora de Contracheques (Frutiger Aero)</title>
+<style>
+  :root {
+    /* Paleta Frutiger Aero */
+    --ink: #0b263b;
+    --ink-soft: #3b5c73;
+    --paper: rgba(255, 255, 255, 0.65);
+    --line: rgba(255, 255, 255, 0.7);
+    --green: #8cc63f;
+    --green-deep: #25821c;
+    --rust: #ef4444;
+    --rust-deep: #b91c1c;
+    --green-bg: linear-gradient(180deg, #e4fac7 0%, #c4f392 100%);
+    --rust-bg: linear-gradient(180deg, #fee2e2 0%, #fecaca 100%);
+    --grad-blue: linear-gradient(180deg, #87e0fd 0%, #53cbf1 49%, #05abe0 50%, #87e0fd 100%);
+    --grad-green: linear-gradient(180deg, #a4d84f 0%, #80c217 49%, #669c0d 50%, #89ce1d 100%);
+    --radius: 12px;
+    --font-sans: 'Segoe UI', Frutiger, 'Frutiger Linotype', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'Consolas', 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  
+  body {
+    background: radial-gradient(circle at 10% 20%, #e0f6ff 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, #d8f5cb 0%, transparent 40%),
+                linear-gradient(135deg, #aedbf0 0%, #6ab2d5 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    font-family: var(--font-sans);
+    color: var(--ink);
+    display: flex;
+    justify-content: center;
+    padding: 0 0 120px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Bolhas Decorativas CSS */
+  body::before, body::after {
+    content: ""; position: fixed; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.1));
+    box-shadow: inset 0 0 15px rgba(255,255,255,0.8), 0 5px 15px rgba(0,0,0,0.05);
+    z-index: -1;
+  }
+  body::before { top: 15%; left: 10%; width: 140px; height: 140px; }
+  body::after { bottom: 20%; right: 5%; width: 80px; height: 80px; }
+
+  .device { width: 100%; max-width: 480px; position: relative; z-index: 1; }
+
+  /* Header */
+  .topbar { padding: 32px 24px 24px; display: flex; align-items: center; gap: 12px; }
+  .mark {
+    width: 42px; height: 42px; border-radius: 50%; background: var(--grad-blue);
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid rgba(255,255,255,0.8);
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 4px 10px rgba(0, 100, 150, 0.3);
+  }
+  .mark svg { width: 22px; height: 22px; color: #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
+  .brandtext { flex: 1; }
+  .brandtext .name { 
+    font-size: 20px; font-weight: 700; color: #0b263b; 
+    text-shadow: 0 1px 0 rgba(255,255,255,0.8); letter-spacing: -0.02em; 
+  }
+  .brandtext .sub { 
+    font-size: 13px; color: #2a4c63; margin-top: 1px; font-weight: 600;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.5); 
+  }
+  
+  /* Relógio Frutiger Aero (Canto Direito) */
+  .datetime-display {
+    display: flex; flex-direction: column; align-items: flex-end;
+    background: linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.2) 100%);
+    border: 1px solid rgba(255,255,255,0.8);
+    padding: 6px 12px; border-radius: 12px;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 4px 6px rgba(0,0,0,0.05);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  .clock-time {
+    font-family: var(--font-mono); font-size: 14px; font-weight: 700;
+    color: #0b263b; text-shadow: 0 1px 0 rgba(255,255,255,0.9); line-height: 1;
+  }
+  .clock-date {
+    font-size: 10px; font-weight: 700; color: #3b5c73; margin-top: 4px;
+    text-transform: uppercase; text-shadow: 0 1px 0 rgba(255,255,255,0.9); line-height: 1;
+  }
+
+  /* Ticket / Vidro Aero */
+  .ticket {
+    background: var(--paper); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.9); margin: 0 16px 24px; border-radius: var(--radius);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 20px 40px -10px rgba(0, 70, 100, 0.2);
+    position: relative; padding-bottom: 12px;
+  }
+
+  .hero { 
+    padding: 32px 24px 24px; position: relative; 
+    border-bottom: 1px solid rgba(255,255,255,0.6); box-shadow: 0 1px 0 rgba(0,0,0,0.05);
+    background: linear-gradient(180deg, rgba(255,255,255,0.4) 0%, transparent 100%);
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .hero .label { 
+    font-size: 13px; color: var(--ink-soft); font-weight: 700; 
+    margin-bottom: 8px; text-transform: uppercase; text-shadow: 0 1px 0 rgba(255,255,255,0.8);
+  }
+  .hero .amount {
+    font-weight: 700; font-size: 46px; line-height: 1; color: var(--green-deep); letter-spacing: -0.04em;
+    text-shadow: 0 2px 4px rgba(255,255,255,0.8), 0 1px 2px rgba(0,0,0,0.1); transition: transform 0.15s ease;
+  }
+  .hero .amount sup { font-size: 20px; font-weight: 600; margin-right: 4px; vertical-align: super; }
+  .hero .amount.pulse { transform: scale(1.03); }
+  
+  .chips { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .chip {
+    font-family: var(--font-mono); font-size: 12px; padding: 6px 14px; 
+    border-radius: 20px; display: flex; gap: 6px; align-items: center; font-weight: 600;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.8), 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid rgba(255,255,255,0.5);
+  }
+  .chip.pos { background: var(--green-bg); color: var(--green-deep); }
+  .chip.neg { background: var(--rust-bg); color: var(--rust-deep); }
+
+  details.block { padding: 0 24px; }
+  details.block + details.block { border-top: 1px solid rgba(255,255,255,0.8); box-shadow: inset 0 1px 0 rgba(0,0,0,0.03); }
+  details.block summary {
+    padding: 20px 0 12px; cursor: pointer; list-style: none; display: flex; align-items: center;
+    gap: 10px; font-size: 15px; font-weight: 700; color: var(--ink); text-shadow: 0 1px 0 #fff;
+  }
+  details.block summary::-webkit-details-marker { display: none; }
+  details.block summary .icon { font-size: 18px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.15)); }
+  details.block summary .chev {
+    margin-left: auto; width: 8px; height: 8px; border-right: 2.5px solid var(--ink-soft); 
+    border-bottom: 2.5px solid var(--ink-soft); transform: rotate(45deg); transition: transform 0.2s ease;
+  }
+  details.block[open] summary .chev { transform: rotate(-135deg); margin-top: 6px; }
+  details.block .body { padding-bottom: 20px; }
+  .block .sub { font-size: 12px; color: var(--ink-soft); margin: 0 0 16px; line-height: 1.4; font-weight: 600; }
+
+  /* Fields & Rows */
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; }
+  .row .rlabel { font-size: 14px; color: var(--ink); font-weight: 600; flex: 1; text-shadow: 0 1px 0 rgba(255,255,255,0.5); }
+  .row .rlabel small { display: block; font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  
+  .field {
+    display: flex; align-items: center; background: #ffffff; border: 1px solid #9bb3c4;
+    border-top-color: #7994a8; border-radius: 6px; padding: 6px 10px; 
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); transition: all 0.2s ease;
+  }
+  .field:focus-within { border-color: #00aeff; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 0 6px rgba(0,174,255,0.6); }
+  .field span.prefix, .field span.suffix { font-family: var(--font-sans); font-size: 13px; color: #5a7687; font-weight: 700; }
+  .field span.prefix { margin-right: 6px; }
+  .field span.suffix { margin-left: 6px; }
+  .field input {
+    border: none; outline: none; width: 100%; font-family: var(--font-mono);
+    font-size: 15px; font-weight: 700; color: #072b45; background: transparent; text-align: right;
+  }
+  .field.wide { width: 140px; }
+  .field.small { width: 80px; }
+  .field.pct { width: 70px; }
+
+  .row.result { 
+    background: rgba(255,255,255,0.6); padding: 12px; border-radius: 8px; margin-top: 8px; 
+    border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+  }
+  .row.result .rlabel { color: var(--ink-soft); font-size: 13px; }
+  .row.result .rvalue { font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--ink); }
+
+  .auto-descontos {
+    background: linear-gradient(180deg, rgba(255,245,245,0.8) 0%, rgba(254,226,226,0.8) 100%);
+    border: 1px solid #fecaca; border-radius: 8px; padding: 8px 16px; margin-bottom: 12px; box-shadow: inset 0 1px 0 #fff;
+  }
+  .auto-descontos .row { padding: 6px 0; }
+  .auto-descontos .row:first-child { border-bottom: 1px dotted #fca5a5; }
+  .auto-descontos .rlabel { color: #991b1b; font-size: 13px; font-weight: 700; }
+  .auto-descontos .rvalue { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: #b91c1c; }
+
+  .subtotal { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 0 8px; margin-top: 8px; border-top: 1px dashed #9bb3c4; }
+  .subtotal .stlabel { font-size: 15px; font-weight: 700; color: var(--ink); text-shadow: 0 1px 0 #fff; }
+  .subtotal .stvalue { font-family: var(--font-mono); font-size: 18px; font-weight: 700; }
+  .subtotal.pos .stvalue { color: var(--green-deep); }
+  .subtotal.neg .stvalue { color: var(--rust-deep); }
+
+  .dynrow { padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.6); }
+  .dynrow:last-child { border-bottom: none; }
+  .dr-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .dr-label {
+    flex: 1; border: 1px solid transparent; background: transparent; font-size: 14px; font-weight: 700; 
+    color: var(--ink); padding: 4px; font-family: var(--font-sans); outline: none; transition: all 0.2s; border-radius: 4px;
+  }
+  .dr-label:focus { background: #fff; border-color: #9bb3c4; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+  .dr-remove {
+    width: 26px; height: 26px; border-radius: 50%; border: 1px solid #d45959; 
+    background: linear-gradient(180deg, #faa5a5 0%, #e25454 49%, #cc3333 50%, #e64c4c 100%);
+    color: #fff; font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: transform 0.1s; box-shadow: inset 0 1px 2px rgba(255,255,255,0.6), 0 2px 4px rgba(0,0,0,0.1); text-shadow: 0 -1px 0 rgba(0,0,0,0.3);
+  }
+  .dr-remove:active { transform: scale(0.9); }
+  
+  .dr-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .dr-fields { display: flex; gap: 8px; }
+  .dr-value { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--ink); text-align: right; }
+
+  .addrow {
+    width: 100%; margin: 12px 0 8px; padding: 12px; border: 1px dashed #7a9cb3; border-radius: 8px;
+    background: rgba(255,255,255,0.4); color: #2a4c63; font-family: var(--font-sans);
+    font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; text-shadow: 0 1px 0 #fff;
+  }
+  .addrow:active { background: rgba(255,255,255,0.8); }
+
+  .resumo { 
+    background: rgba(255,255,255,0.5); margin: 0 -24px; padding: 20px 24px; 
+    border-top: 1px solid #fff; border-bottom: 1px solid rgba(0,0,0,0.05); 
+    box-shadow: inset 0 5px 10px -5px rgba(0,0,0,0.05);
+  }
+  .resumo .row { padding: 6px 0; }
+  .resumo .row .rvalue { font-family: var(--font-mono); font-size: 14px; font-weight: 700; }
+  .resumo .row.total { border-top: 1px dashed #9bb3c4; margin-top: 10px; padding-top: 12px; }
+  .resumo .row.total .rlabel, .resumo .row.total .rvalue { font-size: 17px; font-weight: 700; color: var(--ink); }
+
+  .footer-note { padding: 16px 24px 24px; font-size: 12px; color: #44647a; font-weight: 600; line-height: 1.6; text-align: center; text-shadow: 0 1px 0 rgba(255,255,255,0.7); }
+
+  /* Actions (Glossy Aero Glass Bar) - Ajustado para PDF/Share */
+  .actionbar {
+    position: fixed; bottom: 0; left: 0; right: 0; 
+    background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    display: flex; justify-content: center; gap: 8px; padding: 16px; 
+    border-top: 1px solid rgba(255,255,255,0.8); z-index: 10; box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+  }
+  
+  .actbtn {
+    font-family: var(--font-sans); font-size: 13px; font-weight: 700; padding: 12px 16px;
+    border-radius: 24px; cursor: pointer; 
+    background: linear-gradient(180deg, #fefefe 0%, #e6e6e6 49%, #cccccc 50%, #f2f2f2 100%);
+    border: 1px solid #999; color: #333; transition: transform 0.1s ease; flex: 1; max-width: 150px; text-align: center;
+    box-shadow: inset 0 1px 0 #fff, 0 2px 4px rgba(0,0,0,0.1); text-shadow: 0 1px 0 #fff;
+  }
+  .actbtn:active { transform: scale(0.95); }
+  
+  .actbtn.primary {
+    background: var(--grad-blue); border: 1px solid #047da3; color: #fff; max-width: 180px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 3px 6px rgba(0,100,150,0.25); text-shadow: 0 -1px 1px rgba(0,0,0,0.4);
+  }
+
+  .toast {
+    position: fixed; left: 50%; top: 20px; transform: translate(-50%, -20px);
+    background: rgba(11, 38, 59, 0.9); color: #fff; font-size: 14px; font-weight: 600; padding: 12px 20px;
+    border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); border: 1px solid #2a4c63;
+    opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 50; backdrop-filter: blur(10px);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Estilos Otimizados para Impressão (PDF) */
+  @media print {
+    @page { margin: 1cm; size: A4 portrait; }
+    body, html { background: #fff !important; padding: 0 !important; color: #000 !important; font-size: 12pt; }
+    body::before, body::after, .actionbar, .topbar, .addrow, .dr-remove, .chev, .footer-note { display: none !important; }
+    
+    .ticket { margin: 0; box-shadow: none !important; border: 1px solid #ddd !important; border-radius: 0; backdrop-filter: none !important; background: #fff !important; max-width: 100%; }
+    .hero { background: none !important; border-bottom: 2px solid #000 !important; padding: 15px 0 !important; }
+    .hero .amount { color: #000 !important; text-shadow: none !important; }
+    
+    details.block { padding: 10px 0 !important; border-top: 1px solid #eee !important; display: block !important; }
+    details.block summary { color: #000 !important; text-shadow: none !important; border-bottom: 1px solid #ccc; margin-bottom: 10px; pointer-events: none; }
+    
+    .field { border: none !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }
+    .field input { color: #000 !important; text-align: right !important; }
+    .dr-label { border: none !important; box-shadow: none !important; background: transparent !important; color: #000 !important; }
+    
+    .chip { border: 1px solid #ccc !important; box-shadow: none !important; background: transparent !important; color: #000 !important; }
+    .subtotal.pos .stvalue, .subtotal.neg .stvalue, .auto-descontos .rlabel, .auto-descontos .rvalue { color: #000 !important; }
+    .auto-descontos { background: transparent !important; border: 1px dashed #000 !important; box-shadow: none !important; }
+  }
+
+  @media (max-width: 380px) {
+    .hero .amount { font-size: 38px; }
+    .brandtext .name { font-size: 18px; }
+    .actionbar { gap: 6px; }
+    .actbtn { padding: 12px 8px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="device">
+  <div class="topbar">
+    <div class="mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </div>
+    <div class="brandtext">
+      <div class="name">Verifica AI</div>
+      <div class="sub">Calculadora de Contracheques</div>
+    </div>
+    <div class="datetime-display" title="Hora atual">
+      <div class="clock-time" id="clockTime">00:00:00</div>
+      <div class="clock-date" id="clockDate">--/--/----</div>
+    </div>
+  </div>
+
+  <div class="ticket" id="ticket">
+    <div class="hero">
+      <div class="label">Salário Líquido a Receber</div>
+      <div class="amount" id="amtLiquido"><sup>R$</sup>0,00</div>
+      <div class="chips">
+        <span class="chip pos">Bruto <b id="chipBruto">R$ 0,00</b></span>
+        <span class="chip neg">Descontos <b id="chipDescontos">R$ 0,00</b></span>
+      </div>
+    </div>
+
+    <details class="block" open>
+      <summary><span class="icon">⚙️</span> Parâmetros Base<span class="chev"></span></summary>
+      <div class="body">
+        <div class="sub">Usados para calcular sua hora e dedução de impostos.</div>
+        <div class="row">
+          <div class="rlabel">Salário base contratual</div>
+          <div class="field wide"><span class="prefix">R$</span><input type="text" inputmode="decimal" id="salarioBase" placeholder="0,00"></div>
+        </div>
+        <div class="row">
+          <div class="rlabel">Carga horária mensal<small>Ex: 220</small></div>
+          <div class="field small"><input type="text" inputmode="numeric" id="cargaHoraria" placeholder="220"></div>
+        </div>
+        <div class="row">
+          <div class="rlabel">Nº de dependentes<small>Para cálculo do I.R.</small></div>
+          <div class="field small"><input type="text" inputmode="numeric" id="dependentes" placeholder="0"></div>
+        </div>
+        <div class="row" style="display:none;">
+          <input type="hidden" id="diasUteis" value="26">
+          <input type="hidden" id="domFeriados" value="4">
+        </div>
+        <div class="row result">
+          <div class="rlabel">Valor da hora normal</div>
+          <div class="rvalue" id="valorHora">R$ 0,00</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="block" open>
+      <summary><span class="icon">⏱️</span> Horas Extras (com DSR)<span class="chev"></span></summary>
+      <div class="body">
+        <div class="sub">O DSR é calculado automaticamente (assumindo 26 dias úteis e 4 domingos/feriados).</div>
+        <div id="extrasContainer"></div>
+        <button class="addrow" id="addExtra">+ Adicionar Hora Extra</button>
+        <div class="row result" style="margin-top:12px"><div class="rlabel">DSR Calculado sobre extras</div><div class="rvalue" id="valDsr">R$ 0,00</div></div>
+      </div>
+    </details>
+
+    <details class="block" open>
+      <summary><span class="icon">💧</span> Outros Proventos<span class="chev"></span></summary>
+      <div class="body">
+        <div class="sub">Adicionais fixos (Insalubridade, Periculosidade, Bônus).</div>
+        <div id="proventosContainer"></div>
+        <button class="addrow" id="addProvento">+ Adicionar Provento</button>
+      </div>
+    </details>
+
+    <details class="block" open>
+      <summary><span class="icon">📉</span> Descontos<span class="chev"></span></summary>
+      <div class="body">
+        <div class="sub">INSS e IRRF calculados automaticamente pela Tabela Oficial de 2024.</div>
+        
+        <div class="auto-descontos">
+           <div class="row"><div class="rlabel">INSS (Automático)</div><div class="rvalue" id="autoInss">R$ 0,00</div></div>
+           <div class="row"><div class="rlabel">IRRF (Automático)</div><div class="rvalue" id="autoIrrf">R$ 0,00</div></div>
+        </div>
+
+        <div id="descontosContainer"></div>
+        <button class="addrow" id="addDesconto">+ Adicionar Outro Desconto</button>
+        <div class="subtotal neg">
+          <div class="stlabel">Total de Descontos</div>
+          <div class="stvalue" id="totalDescontos">R$ 0,00</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="block" open>
+      <summary><span class="icon">🧾</span> Resumo Final<span class="chev"></span></summary>
+      <div class="body">
+        <div class="resumo">
+          <div class="row"><div class="rlabel">Salário Base</div><div class="rvalue" id="rSalario">R$ 0,00</div></div>
+          <div class="row"><div class="rlabel">Horas Extras Totais</div><div class="rvalue" id="rExtras">R$ 0,00</div></div>
+          <div class="row"><div class="rlabel">DSR sobre Extras</div><div class="rvalue" id="rDsr">R$ 0,00</div></div>
+          <div class="row"><div class="rlabel">Outros Proventos</div><div class="rvalue" id="rProventos">R$ 0,00</div></div>
+          <div class="row total"><div class="rlabel">Salário Bruto Total</div><div class="rvalue" id="rBruto">R$ 0,00</div></div>
+        </div>
+      </div>
+    </details>
+
+    <div class="footer-note">
+      *Cálculos de INSS e IRRF utilizam as tabelas progressivas vigentes de 2024.<br><strong>Seus dados estão sendo salvos localmente.</strong>
+    </div>
+  </div>
+</div>
+
+<div class="actionbar">
+  <button class="actbtn" id="resetBtn">Zerar</button>
+  <button class="actbtn" id="pdfBtn">Gerar PDF</button>
+  <button class="actbtn primary" id="shareBtn">Compartilhar</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'verificaai_contracheque_v3';
+  const uid = () => 'id_' + Math.random().toString(36).substr(2, 9);
+
+  // --- LÓGICA DO RELÓGIO (FRUTIGER AERO) ---
+  function updateClock() {
+    const now = new Date();
+    const timeEl = document.getElementById('clockTime');
+    const dateEl = document.getElementById('clockDate');
+    
+    timeEl.textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    dateEl.textContent = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).replace('. de', '').replace(' de ', '/');
+  }
+  setInterval(updateClock, 1000);
+  updateClock(); // Chama imediatamente
+
+  // --- MODELO DE DADOS ---
+  function defaultExtras(){
+    return [
+      {id: uid(), label: 'Hora Extra 50%', qtd: '0', pct: '50'},
+      {id: uid(), label: 'Hora Extra 100%', qtd: '0', pct: '100'},
+      {id: uid(), label: 'Interjornada', qtd: '0', pct: '50'},
+      {id: uid(), label: 'Adicional Noturno', qtd: '0', pct: '20'}
+    ];
+  }
+  function defaultProventos(){
+    return [
+      {id: uid(), label: 'Periculosidade (30%)', valor: '0,00'},
+      {id: uid(), label: 'Insalubridade', valor: '0,00'}
+    ];
+  }
+  function defaultDescontos(){
+    return [
+      {id: uid(), label: 'Vale Transporte (6%)', valor: '0,00'},
+      {id: uid(), label: 'Plano de Saúde', valor: '0,00'},
+      {id: uid(), label: 'Faltas / Atrasos', valor: '0,00'}
+    ];
+  }
+  
+  function defaultState(){
+    return {
+      base: {salarioBase:'', cargaHoraria:'220', dependentes:'0', diasUteis:'26', domFeriados:'4'},
+      extras: defaultExtras(),
+      proventos: defaultProventos(),
+      descontos: defaultDescontos()
+    };
+  }
+
+  let state = defaultState();
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.base && parsed.extras && parsed.descontos) {
+        state = { ...defaultState(), ...parsed };
+        if(!state.base.dependentes) state.base.dependentes = '0';
+        state.descontos = state.descontos.filter(d => 
+          !d.label.toUpperCase().includes('INSS') && 
+          !d.label.toUpperCase().includes('IRRF')
+        );
+      }
+    }
+  } catch(e) {}
+
+  function saveState(){
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+  }
+
+  // --- REGRAS TRIBUTÁRIAS ---
+  function calcINSS(bruto) {
+    if (bruto <= 0) return 0;
+    if (bruto > 7786.02) return 908.85; 
+    let inss = 0;
+    let b = bruto;
+    if (b > 4000.03) { inss += (b - 4000.03) * 0.14; b = 4000.03; }
+    if (b > 2666.68) { inss += (b - 2666.68) * 0.12; b = 2666.68; }
+    if (b > 1412.00) { inss += (b - 1412.00) * 0.09; b = 1412.00; }
+    inss += b * 0.075;
+    return inss;
+  }
+
+  function calcIRRF(bruto, inss, dependentes) {
+    if (bruto <= 0) return 0;
+    const deducaoDependentes = dependentes * 189.59;
+    const deducaoLegal = inss + deducaoDependentes;
+    const deducaoAplicada = Math.max(deducaoLegal, 564.80);
+    const baseCalculo = bruto - deducaoAplicada;
+    if (baseCalculo <= 2259.20) return 0;
+    if (baseCalculo <= 2826.65) return (baseCalculo * 0.075) - 169.44;
+    if (baseCalculo <= 3751.05) return (baseCalculo * 0.15) - 381.44;
+    if (baseCalculo <= 4664.68) return (baseCalculo * 0.225) - 662.77;
+    return (baseCalculo * 0.275) - 896.00;
+  }
+
+  function num(str){
+    if (!str) return 0;
+    const raw = String(str).replace(/\./g, '').replace(',', '.').replace(/[^0-9.\-]/g, '');
+    const v = parseFloat(raw);
+    return isNaN(v) ? 0 : v;
+  }
+  function brl(v){
+    return v.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
+  function esc(str){
+    const d = document.createElement('div'); d.textContent = str || ''; return d.innerHTML;
+  }
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(showToast._tm);
+    showToast._tm = setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // --- RENDERIZAÇÃO ---
+  const baseIds = ['salarioBase','cargaHoraria','dependentes','diasUteis','domFeriados'];
+  const extrasContainer = document.getElementById('extrasContainer');
+  const proventosContainer = document.getElementById('proventosContainer');
+  const descontosContainer = document.getElementById('descontosContainer');
+  const amtEl = document.getElementById('amtLiquido');
+  let lastLiquido = null;
+
+  function renderExtras(){
+    extrasContainer.innerHTML = state.extras.map(item => `
+      <div class="dynrow" data-id="${item.id}">
+        <div class="dr-top">
+          <input class="dr-label" data-field="label" type="text" value="${esc(item.label)}" placeholder="Nome da Hora">
+          <button class="dr-remove" data-remove="${item.id}" title="Remover">&times;</button>
+        </div>
+        <div class="dr-bottom">
+          <div class="dr-fields">
+            <div class="field small"><input data-field="qtd" type="text" inputmode="decimal" value="${esc(item.qtd)}" placeholder="Horas"></div>
+            <div class="field pct"><input data-field="pct" type="text" inputmode="decimal" value="${esc(item.pct)}"><span class="suffix">%</span></div>
+          </div>
+          <div class="dr-value" id="val-${item.id}">R$ 0,00</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderProventos(){
+    proventosContainer.innerHTML = state.proventos.map(item => `
+      <div class="dynrow" data-id="${item.id}">
+        <div class="dr-top">
+          <input class="dr-label" data-field="label" type="text" value="${esc(item.label)}" placeholder="Nome do Provento">
+          <button class="dr-remove" data-remove="${item.id}" title="Remover">&times;</button>
+        </div>
+        <div class="dr-bottom" style="justify-content:flex-end">
+          <div class="field wide"><span class="prefix">R$</span><input data-field="valor" type="text" inputmode="decimal" value="${esc(item.valor)}" placeholder="0,00"></div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderDescontos(){
+    descontosContainer.innerHTML = state.descontos.map(item => `
+      <div class="dynrow" data-id="${item.id}">
+        <div class="dr-top">
+          <input class="dr-label" data-field="label" type="text" value="${esc(item.label)}" placeholder="Nome do Desconto">
+          <button class="dr-remove" data-remove="${item.id}" title="Remover">&times;</button>
+        </div>
+        <div class="dr-bottom" style="justify-content:flex-end">
+          <div class="field wide"><span class="prefix">R$</span><input data-field="valor" type="text" inputmode="decimal" value="${esc(item.valor)}" placeholder="0,00"></div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function compute(){
+    const salarioBase = num(state.base.salarioBase);
+    const cargaHoraria = num(state.base.cargaHoraria) || 1;
+    const diasUteis = num(state.base.diasUteis) || 26;
+    const domFeriados = num(state.base.domFeriados) || 4;
+    const dependentes = num(state.base.dependentes);
+
+    const valorHora = salarioBase / cargaHoraria;
+
+    let totalExtrasBrutas = 0;
+    state.extras.forEach(item => {
+      const qtd = num(item.qtd);
+      const pct = num(item.pct);
+      const valor = qtd * valorHora * (1 + pct / 100);
+      totalExtrasBrutas += valor;
+      const el = document.getElementById('val-' + item.id);
+      if (el) el.textContent = 'R$ ' + brl(valor);
+    });
+
+    const dsr = (totalExtrasBrutas / diasUteis) * domFeriados;
+    let totalProventos = 0;
+    state.proventos.forEach(item => { totalProventos += num(item.valor); });
+
+    const bruto = salarioBase + totalExtrasBrutas + dsr + totalProventos;
+
+    const valInss = calcINSS(bruto);
+    const valIrrf = calcIRRF(bruto, valInss, dependentes);
+    document.getElementById('autoInss').textContent = 'R$ ' + brl(valInss);
+    document.getElementById('autoIrrf').textContent = 'R$ ' + brl(valIrrf);
+
+    let descontosManuais = 0;
+    state.descontos.forEach(item => { descontosManuais += num(item.valor); });
+
+    const totalDescontos = descontosManuais + valInss + valIrrf;
+    const liquido = bruto - totalDescontos;
+
+    document.getElementById('valorHora').textContent = 'R$ ' + brl(valorHora);
+    document.getElementById('valDsr').textContent = 'R$ ' + brl(dsr);
+    
+    document.getElementById('rSalario').textContent = 'R$ ' + brl(salarioBase);
+    document.getElementById('rExtras').textContent = 'R$ ' + brl(totalExtrasBrutas);
+    document.getElementById('rDsr').textContent = 'R$ ' + brl(dsr);
+    document.getElementById('rProventos').textContent = 'R$ ' + brl(totalProventos);
+    document.getElementById('rBruto').textContent = 'R$ ' + brl(bruto);
+    document.getElementById('chipBruto').textContent = 'R$ ' + brl(bruto);
+
+    document.getElementById('totalDescontos').textContent = 'R$ ' + brl(totalDescontos);
+    document.getElementById('chipDescontos').textContent = 'R$ ' + brl(totalDescontos);
+
+    amtEl.innerHTML = '<sup>R$</sup>' + brl(liquido);
+
+    if (lastLiquido !== null && liquido !== lastLiquido) {
+      amtEl.classList.remove('pulse');
+      void amtEl.offsetWidth; 
+      amtEl.classList.add('pulse');
+      setTimeout(() => amtEl.classList.remove('pulse'), 150);
+    }
+    lastLiquido = liquido;
+
+    saveState();
+  }
+
+  function init(){
+    baseIds.forEach(id => {
+      const el = document.getElementById(id);
+      if(el) {
+        el.value = state.base[id];
+        el.addEventListener('input', () => { state.base[id] = el.value; compute(); });
+        el.addEventListener('focus', () => el.select());
+      }
+    });
+    renderExtras(); renderProventos(); renderDescontos(); compute();
+  }
+
+  function setupListEvents(container, stateArray, renderFn){
+    container.addEventListener('input', e => {
+      if(!e.target.dataset.field) return;
+      const row = e.target.closest('.dynrow');
+      const item = stateArray.find(x => x.id === row.dataset.id);
+      if(item) { item[e.target.dataset.field] = e.target.value; compute(); }
+    });
+    container.addEventListener('focus', e => {
+      if (e.target.tagName === 'INPUT' && e.target.dataset.field !== 'label') e.target.select();
+    }, true);
+    container.addEventListener('click', e => {
+      const btn = e.target.closest('[data-remove]');
+      if(!btn) return;
+      const id = btn.dataset.remove;
+      const idx = stateArray.findIndex(x => x.id === id);
+      if(idx > -1) { stateArray.splice(idx, 1); renderFn(); compute(); }
+    });
+  }
+
+  setupListEvents(extrasContainer, state.extras, renderExtras);
+  setupListEvents(proventosContainer, state.proventos, renderProventos);
+  setupListEvents(descontosContainer, state.descontos, renderDescontos);
+
+  document.getElementById('addExtra').addEventListener('click', () => {
+    state.extras.push({id: uid(), label: '', qtd: '', pct: '50'});
+    renderExtras(); compute(); focusLast(extrasContainer);
+  });
+  document.getElementById('addProvento').addEventListener('click', () => {
+    state.proventos.push({id: uid(), label: '', valor: ''});
+    renderProventos(); compute(); focusLast(proventosContainer);
+  });
+  document.getElementById('addDesconto').addEventListener('click', () => {
+    state.descontos.push({id: uid(), label: '', valor: ''});
+    renderDescontos(); compute(); focusLast(descontosContainer);
+  });
+
+  function focusLast(container){
+    const inputs = container.querySelectorAll('.dr-label');
+    if(inputs.length) inputs[inputs.length - 1].focus();
+  }
+
+  // --- AÇÕES INFERIORES ---
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if(!confirm('Zerar todos os valores inseridos e voltar ao padrão?')) return;
+    state = defaultState();
+    baseIds.forEach(id => { const el = document.getElementById(id); if(el) el.value = state.base[id]; });
+    renderExtras(); renderProventos(); renderDescontos(); compute();
+    showToast('Dados restaurados ao padrão.');
+  });
+
+  // 1. Gerar PDF Inteligente (Nativo, Alta Qualidade)
+  document.getElementById('pdfBtn').addEventListener('click', () => {
+    document.querySelectorAll('details').forEach(d => d.setAttribute('open', ''));
+    setTimeout(() => window.print(), 300);
+  });
+
+  // 2. Compartilhar / Copiar Dados em Texto Limpo
+  document.getElementById('shareBtn').addEventListener('click', async () => {
+    const liquido = document.getElementById('amtLiquido').innerText.replace('R$', '').trim();
+    const bruto = document.getElementById('rBruto').innerText;
+    const descontos = document.getElementById('totalDescontos').innerText;
+    const base = document.getElementById('rSalario').innerText;
+    
+    let texto = `🧾 *RESUMO DO CONTRACHEQUE*\n\n`;
+    texto += `*Salário Base:* ${base}\n`;
+    
+    if (num(document.getElementById('rExtras').innerText) > 0) {
+      texto += `*Horas Extras Totais:* ${document.getElementById('rExtras').innerText}\n`;
+      texto += `*DSR s/ Extras:* ${document.getElementById('rDsr').innerText}\n`;
+    }
+    
+    if (num(document.getElementById('rProventos').innerText) > 0) {
+      texto += `*Outros Proventos:* ${document.getElementById('rProventos').innerText}\n`;
+    }
+    
+    texto += `\n*Salário Bruto:* ${bruto}\n`;
+    texto += `*Total de Descontos:* ${descontos} (INSS/IRRF inclusos)\n`;
+    texto += `\n💰 *LÍQUIDO A RECEBER: R$ ${liquido}*\n\n`;
+    texto += `_Gerado via Calculadora Verifica AI_`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Resumo do Contracheque', text: texto });
+      } else {
+        await navigator.clipboard.writeText(texto);
+        showToast('Resumo copiado para a área de transferência!');
+      }
+    } catch (err) {
+      console.warn('Falha ao compartilhar', err);
+    }
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>
